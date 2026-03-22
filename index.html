@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz z Hiszpańskiego - Ciało</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 400px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #c60b1e; }
+        .question { font-size: 1.2em; margin-bottom: 16px; }
+        button { width: 100%; padding: 10px; font-size: 1em; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; transition: background 0.3s, transform 0.2s, box-shadow 0.3s; }
+        button:disabled { background: #aaa; }
+        button.correct { background: #28a745 !important; transform: scale(1.05); box-shadow: 0 0 12px rgba(40,167,69,0.6); }
+        button.wrong { background: #dc3545 !important; transform: scale(0.97); box-shadow: 0 0 12px rgba(220,53,69,0.6); }
+        button.highlight { background: #28a745 !important; box-shadow: 0 0 12px rgba(40,167,69,0.6); }
+        .score { margin-top: 16px; text-align: center; font-weight: bold; }
+        /* Ekran startowy */
+        #start-screen { text-align: center; }
+        #start-screen h2 { color: #c60b1e; margin-bottom: 8px; }
+        #start-screen p { color: #555; font-size: 0.95em; margin-bottom: 20px; }
+        .flag-bar { height: 8px; border-radius: 4px; margin-bottom: 18px; background: linear-gradient(to right, #c60b1e 33%, #ffc400 33%, #ffc400 66%, #c60b1e 66%); }
+        .level-btn {
+            display: block; width: 100%; margin: 12px 0; padding: 18px 0; font-size: 1.3em; font-weight: bold;
+            border: none; border-radius: 12px; cursor: pointer; color: #fff;
+            transition: transform 0.15s, box-shadow 0.2s;
+            letter-spacing: 1px;
+        }
+        .level-btn:hover { transform: scale(1.04); }
+        .level-btn:active { transform: scale(0.97); }
+        .level-btn-1 { background: linear-gradient(135deg, #c60b1e, #e8473f); box-shadow: 0 4px 16px rgba(198,11,30,0.35); }
+        .level-btn-2 { background: linear-gradient(135deg, #ffc400, #ffdb4d); color: #7a5800; box-shadow: 0 4px 16px rgba(255,196,0,0.4); }
+        .level-btn-3 { background: linear-gradient(135deg, #c60b1e, #8b0000); box-shadow: 0 4px 16px rgba(139,0,0,0.4); }
+        .level-btn-1:hover { box-shadow: 0 6px 24px rgba(198,11,30,0.5); }
+        .level-btn-2:hover { box-shadow: 0 6px 24px rgba(255,196,0,0.55); }
+        .level-btn-3:hover { box-shadow: 0 6px 24px rgba(139,0,0,0.55); }
+        .emoji { font-size: 1.5em; vertical-align: middle; margin-right: 8px; }
+        #game-screen { display: none; }
+        @media (max-width: 500px) {
+            .container { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🇪🇸 Quiz: Ciało po hiszpańsku 🇪🇸</h1>
+        <div class="flag-bar"></div>
+
+        <!-- EKRAN STARTOWY -->
+        <div id="start-screen">
+            <h2>¡Hola! Wybierz poziom:</h2>
+            <p>Sprawdź swoją znajomość hiszpańskich słówek!</p>
+            <button class="level-btn level-btn-1" onclick="startGame(1)">
+                <span class="emoji">⭐</span> LEVEL 1 – Obrazek + wybór
+            </button>
+            <button class="level-btn level-btn-2" onclick="startGame(2)">
+                <span class="emoji">⭐⭐</span> LEVEL 2 – Tłumaczenie
+            </button>
+            <button class="level-btn level-btn-3" onclick="startGame(3)">
+                <span class="emoji">⭐⭐⭐</span> LEVEL 3 – Pisownia
+            </button>
+        </div>
+
+        <!-- EKRAN GRY -->
+        <div id="game-screen">
+            <div class="level-info" id="level-info">LEVEL 1</div>
+            <div class="image-wrapper" style="text-align:center;margin-bottom:16px;">
+                <img id="word-image" src="" alt="obrazek" style="max-width:200px;max-height:150px;display:none;border-radius:8px;border:1px solid #ccc;background:#eee;" onerror="this.onerror=null;this.src='img/Brak_obrazka.svg';">
+            </div>
+            <div class="question" id="question"></div>
+            <div class="score" id="score"></div>
+        </div>
+    </div>
+    <script>
+        // Lista słówek (PL -> ES)
+        const words = [
+            { pl: "ciało", es: "cuerpo", es_negatywne: ["cuerbo", "cuerpa", "cuerpó"], img: "ciało.jpg" },
+            { pl: "brzuch", es: "la barriga", es_negatywne: ["le barriga", "la bariga", "la barrida"], img: "brzuch.jpg" },
+            { pl: "buzia", es: "la boca", es_negatywne: ["la boco", "la bica", "la bocka"], img: "buzia.jpg" },
+            { pl: "ręka", es: "el brazo", es_negatywne: ["el braso", "el braco", "el bruzo"], img: "ręka.jpg" },
+            { pl: "głowa", es: "la cabeza", es_negatywne: ["la cabesa", "la cabaza", "la cabesa"], img: "głowa.jpg" },
+            { pl: "twarz", es: "la cara", es_negatywne: ["la kara", "la carra", "la carra"], img: "twarz.jpg" },
+            { pl: "brew", es: "la ceja", es_negatywne: ["la cecha", "la ceia", "la cejá"], img: "brew.jpg" },
+            { pl: "mózg", es: "el cerebro", es_negatywne: ["el cerebo", "el cerevro", "el cerebra"], img: "mózg.jpg" },
+            { pl: "szyja", es: "el cuello", es_negatywne: ["el cuelo", "el cuyello", "el cuallo"], img: "szyja.jpg" },
+            { pl: "palec", es: "el dedo", es_negatywne: ["el dedó", "el dedoé", "el dodo"], img: "palec.jpg" },
+            { pl: "plecy", es: "la espalda", es_negatywne: ["la espanda", "la espalada", "la espanda"], img: "plecy.jpg" },
+            { pl: "czoło", es: "la frente", es_negatywne: ["la frenta", "la frende", "la frinte"], img: "czoło.jpg" },
+            { pl: "żołądek", es: "el estómago", es_negatywne: ["el estomago", "el estómogo", "el estómaga"], img: "żołądek.jpg" },
+            { pl: "gardło", es: "la garganta", es_negatywne: ["la garganda", "la gargantae", "la gargenta"], img: "gardło.jpg" },
+            { pl: "ramię", es: "el hombro", es_negatywne: ["el ombro", "el hombra", "el homboro"], img: "ramię.jpg" },
+            { pl: "usta", es: "los labios", es_negatywne: ["los labias", "los labos", "los labiós"], img: "usta.jpg" },
+            { pl: "dłoń", es: "la mano", es_negatywne: ["la mana", "la manoa", "la manó"], img: "dłoń.jpg" },
+            { pl: "nos", es: "la nariz", es_negatywne: ["la naris", "la naríz", "la naríz"], img: "nos.jpg" },
+            { pl: "ucho (wewn.)", es: "el oído", es_negatywne: ["el oido", "el oída", "el oída"], img: "ucho (wewn.).jpg" },
+            { pl: "oko", es: "el ojo", es_negatywne: ["el oja", "el ojó", "el ojoa"], img: "oko.jpg" },
+            { pl: "ucho (zewn.)", es: "la oreja", es_negatywne: ["la oreia", "la orejá", "la oreka"], img: "ucho (zewn.).jpg" },
+            { pl: "klatka piersiowa", es: "el pecho", es_negatywne: ["el pecha", "el pechoa", "el pechó"], img: "klatka piersiowa.jpg" },
+            { pl: "stopa", es: "el pie", es_negatywne: ["el pia", "el pié", "el piea"], img: "stopa.jpg" },
+            { pl: "pierś", es: "el pecho", es_negatywne: ["el pecha", "el pechoa", "el pechó"], img: "pierś.jpg" },
+            { pl: "noga", es: "la pierna", es_negatywne: ["la pierma", "la piernó", "la piernna"], img: "noga.jpg" },
+            { pl: "kolano", es: "la rodilla", es_negatywne: ["la rodila", "la rodila", "la rodillá"], img: "kolano.jpg" },
+            { pl: "pupa", es: "el trasero", es_negatywne: ["el trasera", "el traserro", "el traseró"], img: "pupa.jpg" },
+            { pl: "mięśnie", es: "los músculos", es_negatywne: ["los musculos", "los muscúlos", "los muscolos"], img: "mięśnie.jpg" },
+            { pl: "okrągła twarz", es: "es redonda", es_negatywne: ["es redondo", "es redonada", "es redonida"], img: "okrągła twarz.jpg" },
+            { pl: "podłużna twarz", es: "alargada", es_negatywne: ["alargado", "alargata", "alargida"], img: "podłużna twarz.jpg" },
+            { pl: "duża twarz", es: "es grande", es_negatywne: ["es granda", "es grandé", "es grando"], img: "duża twarz.jpg" },
+            { pl: "mała twarz", es: "pequeña", es_negatywne: ["pequena", "pequeñá", "pequaña"], img: "mała twarz.jpg" },
+            { pl: "szeroka talia", es: "ancha", es_negatywne: ["ancho", "anchae", "anchaá"], img: "szeroka talia.jpg" },
+            { pl: "wąska talia", es: "estrecha", es_negatywne: ["estrecho", "estrechó", "estrechaa"], img: "wąska talia.jpg" },
+            { pl: "długie nogi/ręce", es: "largas", es_negatywne: ["largos", "lorgas", "lorgos"], img: "długie nogi ręce.jpg" },
+            { pl: "krótkie nogi/ręce", es: "cortas", es_negatywne: ["cortos", "cortaz", "cortás"], img: "krótkie nogi ręce.jpg" },
+            { pl: "chude", es: "delgadas", es_negatywne: ["delgatas", "delgades", "delgadis"], img: "chude.jpg" },
+            { pl: "grube", es: "gordas", es_negatywne: ["gordes", "gordaz", "gordás"], img: "grube.jpg" },
+            { pl: "umięśnione", es: "musculosos", es_negatywne: ["musculoses", "musculososz", "musculososas"], img: "umięśnione.jpg" },
+            { pl: "szczupłe / chude", es: "flacos", es_negatywne: ["flacas", "flacoz", "flacós"], img: "szczupłe chude.jpg" },
+            { pl: "prosty", es: "recto", es_negatywne: ["recta", "rectó", "rectos"], img: "prosty.jpg" },
+            { pl: "krzywy", es: "torcido", es_negatywne: ["torcida", "torcído", "torcidos"], img: "krzywy.jpg" }
+        ];
+
+        let current = 0;
+        let score = 0;
+        let timer = null;
+        let currentLevel = 1;
+        const N = 5;
+
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const questionDiv = document.getElementById('question');
+        const scoreDiv = document.getElementById('score');
+        const wordImage = document.getElementById('word-image');
+        const levelInfo = document.getElementById('level-info');
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function startGame(level) {
+            if (level > 3) {
+                alert('Ten poziom będzie dostępny wkrótce!');
+                return;
+            }
+            currentLevel = level;
+            current = 0;
+            score = 0;
+            shuffle(words);
+            startScreen.style.display = 'none';
+            gameScreen.style.display = 'block';
+            if (currentLevel === 1) showQuestion();
+            else if (currentLevel === 2) showQuestionL2();
+            else if (currentLevel === 3) showQuestionL3();
+        }
+
+        function backToMenu() {
+            clearInterval(timer);
+            gameScreen.style.display = 'none';
+            startScreen.style.display = 'block';
+            wordImage.style.display = 'none';
+            const oldBtns = document.querySelectorAll('.answer-btn');
+            oldBtns.forEach(btn => btn.remove());
+        }
+
+        function getRandomEsOptions(correctEs, count) {
+            const allEs = words.map(w => w.es).filter(e => e !== correctEs);
+            const shuffled = allEs.sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, count);
+        }
+
+        function showQuestion() {
+            if (current < words.length) {
+                levelInfo.textContent = 'LEVEL ' + currentLevel;
+                // Ustaw obrazek
+                wordImage.src = 'img/' + (words[current].img || 'Brak_obrazka.svg');
+                wordImage.style.display = 'block';
+                wordImage.onerror = function() {
+                    this.onerror = null;
+                    this.src = 'img/Brak_obrazka.svg';
+                    this.style.display = 'block';
+                };
+                // Pytanie
+                questionDiv.textContent = `Jak jest po hiszpańsku: "${words[current].pl}"?`;
+                // Usuwamy stare przyciski
+                const oldBtns = document.querySelectorAll('.answer-btn');
+                oldBtns.forEach(btn => btn.remove());
+                // Przygotuj odpowiedzi
+                const correct = words[current].es;
+                const wrongs = getRandomEsOptions(correct, 3);
+                const options = [correct, ...wrongs];
+                // Tasuj
+                for (let i = options.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [options[i], options[j]] = [options[j], options[i]];
+                }
+                // Twórz przyciski
+                options.forEach(option => {
+                    const btn = document.createElement('button');
+                    btn.textContent = option;
+                    btn.className = 'answer-btn';
+                    btn.style.margin = '6px 0';
+                    btn.style.width = '100%';
+                    btn.onclick = () => {
+                        clearInterval(timer);
+                        const allBtns = document.querySelectorAll('.answer-btn');
+                        allBtns.forEach(b => b.onclick = null);
+                        allBtns.forEach(b => {
+                            if (b.textContent === correct) {
+                                b.classList.add(option === correct ? 'correct' : 'highlight');
+                            }
+                        });
+                        if (option === correct) {
+                            btn.classList.add('correct');
+                            score++;
+                        } else {
+                            btn.classList.add('wrong');
+                        }
+                        setTimeout(() => { current++; showQuestion(); }, 1000);
+                    };
+                    questionDiv.parentNode.insertBefore(btn, scoreDiv);
+                });
+                // Timer
+                let secondsLeft = N;
+                scoreDiv.textContent = `Pytanie ${current + 1} z ${words.length} | Pozostało: ${secondsLeft}s`;
+                timer = setInterval(() => {
+                    secondsLeft--;
+                    scoreDiv.textContent = `Pytanie ${current + 1} z ${words.length} | Pozostało: ${secondsLeft}s`;
+                    if (secondsLeft <= 0) {
+                        clearInterval(timer);
+                        const allBtns = document.querySelectorAll('.answer-btn');
+                        allBtns.forEach(b => {
+                            b.onclick = null;
+                            if (b.textContent === correct) b.classList.add('highlight');
+                        });
+                        setTimeout(() => { current++; showQuestion(); }, 1000);
+                    }
+                }, 1000);
+            } else {
+                wordImage.style.display = 'none';
+                levelInfo.textContent = 'LEVEL ' + currentLevel + ' - KONIEC';
+                questionDiv.textContent = '¡Muy bien! Koniec quizu!';
+                const oldBtns = document.querySelectorAll('.answer-btn');
+                oldBtns.forEach(btn => btn.remove());
+                scoreDiv.innerHTML = `Twój wynik: ${score} / ${words.length}<br><br>`;
+                // Przycisk powrotu do menu
+                const backBtn = document.createElement('button');
+                backBtn.textContent = '🏠 Wróć do menu';
+                backBtn.className = 'answer-btn';
+                backBtn.style.margin = '10px 0';
+                backBtn.style.background = '#c60b1e';
+                backBtn.onclick = backToMenu;
+                scoreDiv.appendChild(backBtn);
+            }
+        }
+        // ========== LEVEL 2 ==========
+        function getButtonCountForQuestion(index, total) {
+            // Od 2 do 6 przycisków, równomiernie rozłożone
+            const minBtns = 2;
+            const maxBtns = 6;
+            const step = (maxBtns - minBtns) / (total - 1 || 1);
+            return Math.round(minBtns + step * index);
+        }
+
+        function getRandomOptions(correctValue, field, count) {
+            // Losowe opcje z pola 'pl' lub 'es', bez powtórek, bez poprawnej
+            const all = [...new Set(words.map(w => w[field]))].filter(v => v !== correctValue);
+            for (let i = all.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [all[i], all[j]] = [all[j], all[i]];
+            }
+            return all.slice(0, count);
+        }
+
+        function showQuestionL2() {
+            if (current < words.length) {
+                levelInfo.textContent = 'LEVEL 2';
+                wordImage.style.display = 'none';
+
+                // Losuj kierunek: pytanie po PL -> odpowiedzi ES, lub odwrotnie
+                const askPl = Math.random() < 0.5;
+                const questionField = askPl ? 'pl' : 'es';
+                const answerField = askPl ? 'es' : 'pl';
+                const questionLang = askPl ? 'polsku' : 'hiszpańsku';
+                const answerLang = askPl ? 'hiszpańsku' : 'polsku';
+
+                const questionWord = words[current][questionField];
+                const correctAnswer = words[current][answerField];
+
+                // Ile przycisków?
+                const btnCount = getButtonCountForQuestion(current, words.length);
+                const wrongCount = btnCount - 1;
+                const wrongs = getRandomOptions(correctAnswer, answerField, wrongCount);
+                const options = [correctAnswer, ...wrongs];
+
+                // Tasuj
+                for (let i = options.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [options[i], options[j]] = [options[j], options[i]];
+                }
+
+                // Pytanie
+                questionDiv.innerHTML = `Słowo po <strong>${questionLang}</strong>: <br><span style="font-size:1.4em;color:#c60b1e;">${questionWord}</span><br>Wybierz tłumaczenie po <strong>${answerLang}</strong>:`;
+
+                // Usuwamy stare przyciski
+                document.querySelectorAll('.answer-btn').forEach(btn => btn.remove());
+
+                // Twórz przyciski
+                options.forEach(option => {
+                    const btn = document.createElement('button');
+                    btn.textContent = option;
+                    btn.className = 'answer-btn';
+                    btn.style.margin = '6px 0';
+                    btn.style.width = '100%';
+                    btn.onclick = () => {
+                        clearInterval(timer);
+                        const allBtns = document.querySelectorAll('.answer-btn');
+                        allBtns.forEach(b => b.onclick = null);
+                        allBtns.forEach(b => {
+                            if (b.textContent === correctAnswer) {
+                                b.classList.add(option === correctAnswer ? 'correct' : 'highlight');
+                            }
+                        });
+                        if (option === correctAnswer) {
+                            btn.classList.add('correct');
+                            score++;
+                        } else {
+                            btn.classList.add('wrong');
+                        }
+                        setTimeout(() => { current++; showQuestionL2(); }, 1000);
+                    };
+                    questionDiv.parentNode.insertBefore(btn, scoreDiv);
+                });
+
+                // Timer
+                let secondsLeft = N;
+                scoreDiv.textContent = `Pytanie ${current + 1} z ${words.length} (${btnCount} opcji) | Pozostało: ${secondsLeft}s`;
+                timer = setInterval(() => {
+                    secondsLeft--;
+                    scoreDiv.textContent = `Pytanie ${current + 1} z ${words.length} (${btnCount} opcji) | Pozostało: ${secondsLeft}s`;
+                    if (secondsLeft <= 0) {
+                        clearInterval(timer);
+                        const allBtns = document.querySelectorAll('.answer-btn');
+                        allBtns.forEach(b => {
+                            b.onclick = null;
+                            if (b.textContent === correctAnswer) b.classList.add('highlight');
+                        });
+                        setTimeout(() => { current++; showQuestionL2(); }, 1000);
+                    }
+                }, 1000);
+            } else {
+                wordImage.style.display = 'none';
+                levelInfo.textContent = 'LEVEL 2 - KONIEC';
+                questionDiv.textContent = '¡Muy bien! Koniec quizu!';
+                document.querySelectorAll('.answer-btn').forEach(btn => btn.remove());
+                scoreDiv.innerHTML = `Twój wynik: ${score} / ${words.length}<br><br>`;
+                const backBtn = document.createElement('button');
+                backBtn.textContent = '🏠 Wróć do menu';
+                backBtn.className = 'answer-btn';
+                backBtn.style.margin = '10px 0';
+                backBtn.style.background = '#c60b1e';
+                backBtn.onclick = backToMenu;
+                scoreDiv.appendChild(backBtn);
+            }
+        }
+        // ========== LEVEL 3 ==========
+        function showQuestionL3() {
+            if (current < words.length) {
+                levelInfo.textContent = 'LEVEL 3';
+                // Obrazek
+                wordImage.src = 'img/' + (words[current].img || 'Brak_obrazka.svg');
+                wordImage.style.display = 'block';
+                wordImage.onerror = function() {
+                    this.onerror = null;
+                    this.src = 'img/Brak_obrazka.svg';
+                    this.style.display = 'block';
+                };
+                // Pytanie
+                questionDiv.innerHTML = `Jak poprawnie pisze się po hiszpańsku:<br><span style="font-size:1.4em;color:#c60b1e;">${words[current].pl}</span>`;
+                // Usuwamy stare przyciski
+                document.querySelectorAll('.answer-btn').forEach(btn => btn.remove());
+                // Przygotuj odpowiedzi: 1 poprawna + losowo 1-3 z es_negatywne
+                const correct = words[current].es;
+                const negatives = [...words[current].es_negatywne];
+                // Losowa ilość fałszywych: 1 do 3 (lub mniej jeśli mniej dostępnych)
+                const fakeCount = Math.min(negatives.length, 1 + Math.floor(Math.random() * 3));
+                shuffle(negatives);
+                const fakes = negatives.slice(0, fakeCount);
+                const options = [correct, ...fakes];
+                // Tasuj
+                for (let i = options.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [options[i], options[j]] = [options[j], options[i]];
+                }
+                // Twórz przyciski
+                options.forEach(option => {
+                    const btn = document.createElement('button');
+                    btn.textContent = option;
+                    btn.className = 'answer-btn';
+                    btn.style.margin = '6px 0';
+                    btn.style.width = '100%';
+                    btn.onclick = () => {
+                        clearInterval(timer);
+                        const allBtns = document.querySelectorAll('.answer-btn');
+                        allBtns.forEach(b => b.onclick = null);
+                        allBtns.forEach(b => {
+                            if (b.textContent === correct) {
+                                b.classList.add(option === correct ? 'correct' : 'highlight');
+                            }
+                        });
+                        if (option === correct) {
+                            btn.classList.add('correct');
+                            score++;
+                        } else {
+                            btn.classList.add('wrong');
+                        }
+                        setTimeout(() => { current++; showQuestionL3(); }, 1000);
+                    };
+                    questionDiv.parentNode.insertBefore(btn, scoreDiv);
+                });
+                // Timer
+                let secondsLeft = N;
+                scoreDiv.textContent = `Pytanie ${current + 1} z ${words.length} | Pozostało: ${secondsLeft}s`;
+                timer = setInterval(() => {
+                    secondsLeft--;
+                    scoreDiv.textContent = `Pytanie ${current + 1} z ${words.length} | Pozostało: ${secondsLeft}s`;
+                    if (secondsLeft <= 0) {
+                        clearInterval(timer);
+                        const allBtns = document.querySelectorAll('.answer-btn');
+                        allBtns.forEach(b => {
+                            b.onclick = null;
+                            if (b.textContent === correct) b.classList.add('highlight');
+                        });
+                        setTimeout(() => { current++; showQuestionL3(); }, 1000);
+                    }
+                }, 1000);
+            } else {
+                wordImage.style.display = 'none';
+                levelInfo.textContent = 'LEVEL 3 - KONIEC';
+                questionDiv.textContent = '¡Muy bien! Koniec quizu!';
+                document.querySelectorAll('.answer-btn').forEach(btn => btn.remove());
+                scoreDiv.innerHTML = `Twój wynik: ${score} / ${words.length}<br><br>`;
+                const backBtn = document.createElement('button');
+                backBtn.textContent = '🏠 Wróć do menu';
+                backBtn.className = 'answer-btn';
+                backBtn.style.margin = '10px 0';
+                backBtn.style.background = '#c60b1e';
+                backBtn.onclick = backToMenu;
+                scoreDiv.appendChild(backBtn);
+            }
+        }
+    </script>
+</body>
+</html>
