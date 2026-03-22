@@ -138,6 +138,16 @@
             }
         }
 
+        function speakEs(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'es-ES';
+                utter.rate = 0.85;
+                window.speechSynthesis.speak(utter);
+            }
+        }
+
         function startGame(level) {
             if (level > 3) {
                 alert('Ten poziom będzie dostępny wkrótce!');
@@ -156,10 +166,11 @@
 
         function backToMenu() {
             clearInterval(timer);
+            window.speechSynthesis.cancel();
             gameScreen.style.display = 'none';
             startScreen.style.display = 'block';
             wordImage.style.display = 'none';
-            const oldBtns = document.querySelectorAll('.answer-btn');
+            const oldBtns = document.querySelectorAll('.answer-btn, .speak-btn');
             oldBtns.forEach(btn => btn.remove());
         }
 
@@ -182,11 +193,12 @@
                 };
                 // Pytanie
                 questionDiv.textContent = `Jak jest po hiszpańsku: "${words[current].pl}"?`;
+                // Przygotuj poprawną odpowiedź
+                const correct = words[current].es;
                 // Usuwamy stare przyciski
-                const oldBtns = document.querySelectorAll('.answer-btn');
+                const oldBtns = document.querySelectorAll('.answer-btn, .speak-btn');
                 oldBtns.forEach(btn => btn.remove());
                 // Przygotuj odpowiedzi
-                const correct = words[current].es;
                 const wrongs = getRandomEsOptions(correct, 3);
                 const options = [correct, ...wrongs];
                 // Tasuj
@@ -216,6 +228,7 @@
                         } else {
                             btn.classList.add('wrong');
                         }
+                        speakEs(correct);
                         setTimeout(() => { current++; showQuestion(); }, 1000);
                     };
                     questionDiv.parentNode.insertBefore(btn, scoreDiv);
@@ -233,6 +246,7 @@
                             b.onclick = null;
                             if (b.textContent === correct) b.classList.add('highlight');
                         });
+                        speakEs(correct);
                         setTimeout(() => { current++; showQuestion(); }, 1000);
                     }
                 }, 1000);
@@ -240,7 +254,7 @@
                 wordImage.style.display = 'none';
                 levelInfo.textContent = 'LEVEL ' + currentLevel + ' - KONIEC';
                 questionDiv.textContent = '¡Muy bien! Koniec quizu!';
-                const oldBtns = document.querySelectorAll('.answer-btn');
+                const oldBtns = document.querySelectorAll('.answer-btn, .speak-btn');
                 oldBtns.forEach(btn => btn.remove());
                 scoreDiv.innerHTML = `Twój wynik: ${score} / ${words.length}<br><br>`;
                 // Przycisk powrotu do menu
